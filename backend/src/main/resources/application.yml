@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: uqdelivery
+  datasource:
+    url: jdbc:h2:mem:uqdelivery;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+server:
+  port: 8080
+app:
+  jwt:
+    # Solo para desarrollo. En produccion definir la variable de entorno JWT_SECRET (Base64, minimo 32 bytes).
+    secret: ${JWT_SECRET:s7idFRLUrpyxfhGPYHnzmR5jahRCoebAYWiqvSkWt3a59b4+EEMZl7NMK32+VW2a}
+    expiration-minutes: 60
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
