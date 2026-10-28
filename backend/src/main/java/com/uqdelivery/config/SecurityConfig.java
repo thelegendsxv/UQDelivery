@@ -1,15 +1,27 @@
 package com.uqdelivery.config;
 
+import com.uqdelivery.security.JwtAuthFilter;
+import com.uqdelivery.security.JwtService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -18,13 +30,35 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // API stateless, sin cookies de sesion
+            .csrf(csrf -> csrf.disable()) // API stateless con JWT en header, sin cookies de sesion
+            .cors(Customizer.withDefaults())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(h -> h
+                .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'"))
+                .frameOptions(f -> f.deny()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                .anyRequest().authenticated());
+                .anyRequest().authenticated())
+            .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
+                res.setStatus(401);
+                res.setContentType("application/json");
+                res.getWriter().write("{\"status\":401,\"message\":\"No autenticado\"}");
+            }))
+            .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins}") List<String> origins) {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOrigins(origins);
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", cfg);
+        return source;
     }
 }
