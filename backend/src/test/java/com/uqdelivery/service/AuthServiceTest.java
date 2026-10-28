@@ -8,6 +8,7 @@ import com.uqdelivery.dto.RegisterRequest;
 import com.uqdelivery.dto.UserResponse;
 import com.uqdelivery.exception.DuplicateEmailException;
 import com.uqdelivery.exception.InvalidCredentialsException;
+import com.uqdelivery.exception.TooManyAttemptsException;
 import com.uqdelivery.repository.UserRepository;
 import com.uqdelivery.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ class AuthServiceTest {
 
     private UserRepository repo;
     private PasswordEncoder encoder;
+    private LoginAttemptService attempts;
     private JwtService jwt;
     private AuthService service;
 
@@ -35,8 +37,9 @@ class AuthServiceTest {
     void setUp() {
         repo = mock(UserRepository.class);
         encoder = new BCryptPasswordEncoder(4);
+        attempts = new LoginAttemptService();
         jwt = new JwtService(SECRET, 60);
-        service = new AuthService(repo, encoder, jwt);
+        service = new AuthService(repo, encoder, jwt, attempts);
     }
 
     private User storedUser(String email, String rawPassword) {
@@ -96,5 +99,29 @@ class AuthServiceTest {
         InvalidCredentialsException ex = assertThrows(InvalidCredentialsException.class,
                 () -> service.login(new LoginRequest("nadie@mail.com", "Clave1234")));
         assertEquals(new InvalidCredentialsException().getMessage(), ex.getMessage());
+    }
+
+    @Test
+    void accountIsLockedAfterTooManyFailures() {
+        when(repo.findByEmail("ana@mail.com")).thenReturn(Optional.of(storedUser("ana@mail.com", "Clave1234")));
+        for (int i = 0; i < LoginAttemptService.MAX_FAILURES; i++) {
+            assertThrows(InvalidCredentialsException.class,
+                    () -> service.login(new LoginRequest("ana@mail.com", "Mala12345")));
+        }
+        // incluso con la clave correcta queda bloqueado
+        assertThrows(TooManyAttemptsException.class,
+                () -> service.login(new LoginRequest("ana@mail.com", "Clave1234")));
+    }
+
+    @Test
+    void successfulLoginResetsFailureCounter() {
+        when(repo.findByEmail("ana@mail.com")).thenReturn(Optional.of(storedUser("ana@mail.com", "Clave1234")));
+        for (int i = 0; i < LoginAttemptService.MAX_FAILURES - 1; i++) {
+            assertThrows(InvalidCredentialsException.class,
+                    () -> service.login(new LoginRequest("ana@mail.com", "Mala12345")));
+        }
+        assertNotNull(service.login(new LoginRequest("ana@mail.com", "Clave1234")).token());
+        assertThrows(InvalidCredentialsException.class,
+                () -> service.login(new LoginRequest("ana@mail.com", "Mala12345")));
     }
 }
