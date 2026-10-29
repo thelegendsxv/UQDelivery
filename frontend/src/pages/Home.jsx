@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../auth.js'
 import { Logo } from '../components/AuthShell.jsx'
 import RouteMap from '../components/RouteMap.jsx'
@@ -7,7 +7,7 @@ const ROLES = {
   ADMINISTRADOR: {
     nombre: 'administrador',
     acciones: [
-      ['Gestionar usuarios', 'Administra repartidores y clientes corporativos.'],
+      ['Gestionar usuarios', 'Asigna roles, crea repartidores y activa o desactiva cuentas.', '/admin/usuarios'],
       ['Configurar la plataforma', 'Ajusta la configuración global del sistema.'],
       ['Ver métricas del negocio', 'Consulta el rendimiento general de los envíos.'],
     ],
@@ -40,46 +40,48 @@ export default function Home() {
     clearSession()
     navigate('/login')
   }
-
-  // React escapa el contenido por defecto, así que el nombre no puede inyectar HTML.
+  
   return (
-    <div className="home">
-      <header className="topbar">
-        <Logo />
-        <div className="user">
-          <span className="avatar" aria-hidden="true">{primerNombre.charAt(0).toUpperCase()}</span>
-          <div className="user-info">
-            <span className="user-name">{session.nombre}</span>
-            <span className="chip chip-role">{rol.nombre}</span>
+      <div className="home">
+        <header className="topbar">
+          <Logo />
+          <div className="user">
+            <span className="avatar" aria-hidden="true">{primerNombre.charAt(0).toUpperCase()}</span>
+            <div className="user-info">
+              <span className="user-name">{session.nombre}</span>
+              <span className="chip chip-role">{rol.nombre}</span>
+            </div>
+            <Link className="btn-ghost" to="/perfil">Mi perfil</Link>
+            <button className="btn-ghost" onClick={logout}>Cerrar sesión</button>
           </div>
-          <button className="btn-ghost" onClick={logout}>Cerrar sesión</button>
-        </div>
-      </header>
+        </header>
 
-      <section className="home-hero">
-        <RouteMap className="map-svg" />
-        <div className="hero-fade" />
-        <div className="hero-text">
-          <h1>Hola, {primerNombre}.</h1>
-          <p>Tu cuenta está lista. Entraste como {rol.nombre}.</p>
-        </div>
-      </section>
+        <section className="home-hero">
+          <RouteMap className="map-svg" />
+          <div className="hero-fade" />
+          <div className="hero-text">
+            <h1>Hola, {primerNombre}.</h1>
+            <p>Tu cuenta está lista. Entraste como {rol.nombre}.</p>
+          </div>
+        </section>
 
-      <main className="home-body">
-        <h2>Lo que podrás hacer como {rol.nombre}</h2>
-        <ul className="todo">
-          {rol.acciones.map(([titulo, detalle]) => (
-            <li key={titulo}>
-              <div>
-                <p className="todo-title">{titulo}</p>
-                <p className="todo-desc">{detalle}</p>
-              </div>
-              <span className="chip chip-soon">Próximamente</span>
-            </li>
-          ))}
-        </ul>
-        <p className="home-note">Estas secciones se irán activando a medida que avance el proyecto.</p>
-      </main>
-    </div>
+        <main className="home-body">
+          <h2>Lo que podrás hacer como {rol.nombre}</h2>
+          <ul className="todo">
+            {rol.acciones.map(([titulo, detalle, ruta]) => (
+                <li key={titulo}>
+                  <div>
+                    <p className="todo-title">{titulo}</p>
+                    <p className="todo-desc">{detalle}</p>
+                  </div>
+                  {ruta
+                      ? <Link className="chip chip-ready" to={ruta}>Abrir</Link>
+                      : <span className="chip chip-soon">Próximamente</span>}
+                </li>
+            ))}
+          </ul>
+          <p className="home-note">Estas secciones se irán activando a medida que avance el proyecto.</p>
+        </main>
+      </div>
   )
 }
