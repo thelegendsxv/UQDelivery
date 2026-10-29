@@ -10,7 +10,7 @@ spring:
       ddl-auto: update
     open-in-view: false
 server:
-  port: 8080
+  port: ${PORT:8090}
 app:
   jwt:
     # Solo para desarrollo. En produccion definir la variable de entorno JWT_SECRET (Base64, minimo 32 bytes).
