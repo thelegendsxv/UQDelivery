@@ -1,5 +1,6 @@
 package com.uqdelivery.security;
 
+import com.uqdelivery.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -17,9 +18,11 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository users;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UserRepository users) {
         this.jwtService = jwtService;
+        this.users = users;
     }
 
     @Override
@@ -29,12 +32,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             try {
                 Claims claims = jwtService.parse(header.substring(7));
-                var auth = new UsernamePasswordAuthenticationToken(
-                        claims.getSubject(), null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + claims.get("role", String.class))));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                // HU-02: el rol y el estado se leen de la BD en cada peticion
+                users.findByEmail(claims.getSubject())
+                        .filter(u -> u.isActivo())
+                        .ifPresent(u -> SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(u.getEmail(), null,
+                                        List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))));
             } catch (JwtException | IllegalArgumentException ignored) {
-                // Token invalido: la peticion sigue sin autenticar y el entry point respondera 401.
+                // Token invalido
             }
         }
         chain.doFilter(request, response);
