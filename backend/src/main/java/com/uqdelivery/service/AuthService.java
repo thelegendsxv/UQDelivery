@@ -57,7 +57,8 @@ public class AuthService {
 
         User user = users.findByEmail(email).orElse(null);
         boolean matches = encoder.matches(req.password(), user != null ? user.getPasswordHash() : dummyHash);
-        if (user == null || !matches) {
+        // HU-02: una cuenta desactivada por el administrador no puede entrar.
+        if (user == null || !matches || !user.isActivo()) {
             attempts.recordFailure(email);
             throw new InvalidCredentialsException();
         }

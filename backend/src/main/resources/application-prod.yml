@@ -6,3 +6,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+app:
+  admin:
+    # En produccion no hay valores por defecto: si no se definen, no se crea administrador.
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}

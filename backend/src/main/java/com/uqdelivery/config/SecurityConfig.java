@@ -1,5 +1,6 @@
 package com.uqdelivery.config;
 
+import com.uqdelivery.repository.UserRepository;
 import com.uqdelivery.security.JwtAuthFilter;
 import com.uqdelivery.security.JwtService;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,23 +31,34 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
+                                           UserRepository userRepository) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // API stateless con JWT en header, sin cookies de sesion
-            .cors(Customizer.withDefaults())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .headers(h -> h
-                .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'"))
-                .frameOptions(f -> f.deny()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                .anyRequest().authenticated())
-            .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
-                res.setStatus(401);
-                res.setContentType("application/json");
-                res.getWriter().write("{\"status\":401,\"message\":\"No autenticado\"}");
-            }))
-            .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable()) // API stateless con JWT en header, sin cookies de sesion
+                .cors(Customizer.withDefaults())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(h -> h
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'"))
+                        .frameOptions(f -> f.deny()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        // HU-02: perfil propio para cualquier usuario autenticado; el resto, solo ADMINISTRADOR.
+                        .requestMatchers("/api/usuarios/me").authenticated()
+                        .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("ADMINISTRADOR")
+                        .anyRequest().authenticated())
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((req, res, ex) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"status\":401,\"message\":\"No autenticado\"}");
+                        })
+                        // HU-02, criterio 2: acceso a una funcionalidad que no corresponde al rol -> 403 en JSON.
+                        .accessDeniedHandler((req, res, ex) -> {
+                            res.setStatus(403);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"status\":403,\"message\":\"No tienes permiso para realizar esta accion\"}");
+                        }))
+                .addFilterBefore(new JwtAuthFilter(jwtService, userRepository), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
