@@ -10,7 +10,7 @@ spring:
       ddl-auto: update
     open-in-view: false
 server:
-  port: ${PORT:8090}
+  port: 8080
 app:
   jwt:
     # Solo para desarrollo. En produccion definir la variable de entorno JWT_SECRET (Base64, minimo 32 bytes).
@@ -18,3 +18,8 @@ app:
     expiration-minutes: 60
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  # HU-02: administrador inicial (AdminSeeder, creado en config). Valores solo para desarrollo local;
+  # en produccion se definen ADMIN_EMAIL y ADMIN_PASSWORD como variables de entorno.
+  admin:
+    email: ${ADMIN_EMAIL:admin@uqdelivery.com}
+    password: ${ADMIN_PASSWORD:Admin12345}
