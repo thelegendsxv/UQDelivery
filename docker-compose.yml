@@ -1,0 +1,39 @@
+# Levanta PostgreSQL y el backend con un solo comando:  docker compose up --build
+# Antes, copia .env.example como .env y completa los valores.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: uqdelivery-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-uqdelivery}
+      POSTGRES_USER: ${POSTGRES_USER:-uqdelivery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uqdelivery}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - uqdelivery-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: uqdelivery-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-uqdelivery}
+      DB_USER: ${POSTGRES_USER:-uqdelivery}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-uqdelivery}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en el archivo .env}
+    ports:
+      - "${BACKEND_PORT:-8090}:8090"
+
+volumes:
+  uqdelivery-db-data:
