@@ -74,4 +74,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse(400, "Valor invalido para el parametro " + ex.getName()));
     }
+
+    //HU-05
+
+    @ExceptionHandler(TarifaNoDisponibleException.class)
+    public ResponseEntity<ErrorResponse> handleTarifaNoDisponible(TarifaNoDisponibleException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(503, ex.getMessage()));
+    }
 }
