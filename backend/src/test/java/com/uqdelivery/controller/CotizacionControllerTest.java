@@ -150,6 +150,14 @@ class CotizacionControllerTest {
     }
 
     @Test
+    void otroRolConCuerpoInvalidoRecibe403YNo400() throws Exception {
+        mvc.perform(post(URL).header("Authorization", token("hu05.admin@mail.com", Role.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
+    @Test
     void sinTokenRecibe401() throws Exception {
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(VALIDA))
                 .andExpect(status().isUnauthorized());

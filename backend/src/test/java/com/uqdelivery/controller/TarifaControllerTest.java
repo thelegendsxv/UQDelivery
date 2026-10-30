@@ -114,6 +114,8 @@ class TarifaControllerTest {
     @WithMockUser(roles = "REPARTIDOR")
     void repartidorRecibe403() throws Exception {
         mvc.perform(get("/api/tarifas")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/tarifas/" + idActiva()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
