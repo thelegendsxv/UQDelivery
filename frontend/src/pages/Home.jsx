@@ -8,6 +8,7 @@ const ROLES = {
     nombre: 'administrador',
     acciones: [
       ['Gestionar usuarios', 'Asigna roles, crea repartidores y activa o desactiva cuentas.', '/admin/usuarios'],
+      ['Configurar tarifas', 'Ajusta los valores con los que se cotizan los envíos.', '/admin/tarifas'],
       ['Configurar la plataforma', 'Ajusta la configuración global del sistema.'],
       ['Ver métricas del negocio', 'Consulta el rendimiento general de los envíos.'],
     ],
@@ -15,6 +16,7 @@ const ROLES = {
   CLIENTE_EMISOR: {
     nombre: 'cliente emisor',
     acciones: [
+      ['Cotizar un envío', 'Conoce el precio estimado según el peso, las medidas y la distancia.', '/cotizar'],
       ['Solicitar un envío', 'Registra un paquete con su origen y su destino.'],
       ['Pagar el servicio', 'Paga tus envíos desde la plataforma.'],
       ['Consultar tu historial', 'Revisa todos los envíos que has solicitado.'],

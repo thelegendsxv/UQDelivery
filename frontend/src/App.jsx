@@ -5,6 +5,8 @@ import Home from './pages/Home.jsx'
 import Profile from './pages/Profile.jsx'
 import AdminUsers from './pages/AdminUsers.jsx'
 import Forbidden from './pages/Forbidden.jsx'
+import Quote from './pages/Quote.jsx'
+import AdminTarifas from './pages/AdminTarifas.jsx'
 import { getSession } from './auth.js'
 import { ROLES } from './roles.js'
 import './usuarios.css'
@@ -24,6 +26,8 @@ export default function App() {
             <Route path="/" element={<Protected><Home /></Protected>} />
             <Route path="/perfil" element={<Protected><Profile /></Protected>} />
             <Route path="/admin/usuarios" element={<Protected roles={[ROLES.ADMINISTRADOR]}><AdminUsers /></Protected>} />
+            <Route path="/cotizar" element={<Protected roles={[ROLES.CLIENTE_EMISOR]}><Quote /></Protected>} />
+            <Route path="/admin/tarifas" element={<Protected roles={[ROLES.ADMINISTRADOR]}><AdminTarifas /></Protected>} />
             <Route path="/acceso-denegado" element={<Protected><Forbidden /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
