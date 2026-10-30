@@ -1,0 +1,13 @@
+/* HU-03 - Estilos de recuperacion de contrasena, con los colores de index.css */
+
+.forgot-link { display: block; width: fit-content; margin: -6px 0 18px auto; font-size: 0.9rem; font-weight: 600; color: var(--route-ink); text-underline-offset: 3px; }
+
+.sent-to { margin-bottom: 20px; padding: 14px 16px; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--paper); }
+.sent-to span { display: block; font-size: 0.85rem; color: var(--ink-soft); }
+.sent-to strong { font-family: var(--font-display); font-size: 1.05rem; overflow-wrap: anywhere; }
+
+.recovery-steps { margin: 0 0 24px; padding-left: 20px; color: var(--ink-soft); }
+.recovery-steps li { margin-bottom: 6px; }
+
+a.btn { text-decoration: none; }
+.btn-ghost.btn-block { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; margin-top: 12px; text-decoration: none; }
