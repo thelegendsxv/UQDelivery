@@ -8,6 +8,8 @@ import Forbidden from './pages/Forbidden.jsx'
 import Quote from './pages/Quote.jsx'
 import AdminTarifas from './pages/AdminTarifas.jsx'
 import NewShipment from './pages/NewShipment.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import { getSession } from './auth.js'
 import { ROLES } from './roles.js'
 import './usuarios.css'
@@ -24,6 +26,8 @@ export default function App() {
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Register />} />
+            <Route path="/recuperar-contrasena" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Protected><Home /></Protected>} />
             <Route path="/perfil" element={<Protected><Profile /></Protected>} />
             <Route path="/admin/usuarios" element={<Protected roles={[ROLES.ADMINISTRADOR]}><AdminUsers /></Protected>} />
