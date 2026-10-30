@@ -62,6 +62,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(403, "No tienes permiso para realizar esta accion"));
     }
 
+    //HU-03
+
+    @ExceptionHandler(ReseteoContrasenaException.class)
+    public ResponseEntity<ErrorResponse> handlePasswordReset(ReseteoContrasenaException ex) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(400, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest()
