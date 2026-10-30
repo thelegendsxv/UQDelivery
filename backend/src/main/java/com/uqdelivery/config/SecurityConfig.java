@@ -42,6 +42,8 @@ public class SecurityConfig {
                         .frameOptions(f -> f.deny()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        // HU-03: recuperacion de contrasena (publico)
+                        .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                         // HU-02: perfil propio para cualquier usuario autenticado; el resto, solo ADMINISTRADOR.
                         .requestMatchers("/api/usuarios/me").authenticated()
                         .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("ADMINISTRADOR")
