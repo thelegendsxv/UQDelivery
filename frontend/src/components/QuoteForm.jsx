@@ -118,6 +118,10 @@ function limpiar(iniciales = {}) {
 }
 
 function pendientes(errores) {
-    const nombres = Object.keys(errores).map((k) => CAMPOS_COTIZACION[k] ?? k)
+    // El servidor no garantiza el orden de fieldErrors: se muestran en el orden del formulario.
+    const orden = Object.keys(CAMPOS_COTIZACION)
+    const nombres = Object.keys(errores)
+        .sort((a, b) => orden.indexOf(a) - orden.indexOf(b))
+        .map((k) => CAMPOS_COTIZACION[k] ?? k)
     return `Revisa estos datos antes de cotizar: ${nombres.join(', ')}.`
 }
