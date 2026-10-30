@@ -6,6 +6,7 @@ import { validateLogin } from '../validation.js'
 import AuthShell from '../components/AuthShell.jsx'
 import Field from '../components/Field.jsx'
 import PasswordField from '../components/PasswordField.jsx'
+import '../recuperacion.css'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -43,11 +44,17 @@ export default function Login() {
       {location.state?.registered && (
         <p className="banner banner-ok" role="status">Cuenta creada. Ya puedes iniciar sesión.</p>
       )}
+      {location.state?.passwordReset && (
+        <p className="banner banner-ok" role="status">Contraseña actualizada. Ya puedes iniciar sesión con la nueva.</p>
+      )}
       <form onSubmit={onSubmit} noValidate>
         <Field label="Correo electrónico" name="email" type="email" value={values.email}
                onChange={onChange} error={errors.email} autoComplete="email" />
         <PasswordField label="Contraseña" name="password" value={values.password}
                        onChange={onChange} error={errors.password} autoComplete="current-password" />
+        <Link className="forgot-link" to="/recuperar-contrasena" state={{ email: values.email }}>
+          ¿Olvidaste tu contraseña?
+        </Link>
         {serverError && <p className="banner banner-error" role="alert">{serverError}</p>}
         <button className="btn" type="submit" disabled={loading}>
           {loading ? <><span className="spinner" aria-hidden="true" />Entrando…</> : 'Iniciar sesión'}
