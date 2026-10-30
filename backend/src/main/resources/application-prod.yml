@@ -11,3 +11,7 @@ app:
     # En produccion no hay valores por defecto: si no se definen, no se crea administrador.
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
+  # HU-03: en produccion el enlace nunca va al log; requiere MAIL_* y FRONTEND_URL.
+  password-reset:
+    frontend-url: ${FRONTEND_URL}
+    log-link: false

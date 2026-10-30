@@ -18,6 +18,20 @@ app:
     expiration-minutes: 60
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  # HU-03: recuperacion de contrasena. Enlace FRONTEND_URL/reset-password?token=... que vence en 30 min.
+  # Sin MAIL_HOST (desarrollo) el enlace se escribe en el log del backend.
+  password-reset:
+    expiration-minutes: 30
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+    log-link: true
+    cleanup-cron: "0 0 3 * * *"
+  # HU-03: SMTP por variables de entorno (Mailtrap o Gmail con contrasena de aplicacion). Nunca en el repo.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:no-reply@uqdelivery.com}
   # HU-02: administrador inicial (AdminSeeder, creado en config). Valores solo para desarrollo local;
   # en produccion se definen ADMIN_EMAIL y ADMIN_PASSWORD como variables de entorno.
   admin:
