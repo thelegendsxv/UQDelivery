@@ -1,6 +1,7 @@
 # HU-05 · Cotización automática de envíos
 
 Responsable: Santiago Arias Rodríguez · Rama: `feature/HU-05-cotizacion` · 5 puntos
+Ampliación (distancia por ruta con TomTom): Jose Manuel Bedoya Mondragón · Rama: `feature/HU-04-05-busqueda-lugares`
 
 > Como cliente emisor, quiero conocer el precio estimado de mi envío antes de solicitarlo, para decidir si lo envío.
 
@@ -9,6 +10,8 @@ Igual que HU-01: backend en http://localhost:8090 (`cd backend && mvn spring-boo
 http://localhost:5173 (`cd frontend && npm run dev`, proxy `/api` → 8090).
 - Cliente emisor: registrarse en `/registro` → menú **Cotizar** (o "Cotizar un envío" en el inicio).
 - Administrador: `admin@uqdelivery.com` / `Admin12345` → menú **Tarifas**.
+- Para la distancia por calles hace falta la variable `TOMTOM_API_KEY` (ver sección *Distancia por calles*). Sin ella la
+  cotización sigue funcionando con la línea recta.
 
 ## Reglas tarifarias
 
@@ -20,9 +23,9 @@ peso facturable  = max(peso real, peso volumétrico)
 recargos         = recargo frágil (si es frágil) + recargo urgente (si es urgente)
 ```
 
-- Distancia: línea recta con la fórmula de Haversine (radio 6371 km). Interfaz `DistanciaService`; la implementación
-  del Sprint 1 es `HaversineDistanciaService`. En el Sprint 2 se reemplaza por la distancia por ruta de la API de mapas
-  registrando otra implementación con `@Primary`, sin cambiar `CotizacionService`.
+- Distancia: por las calles (ruta en carro) con TomTom Routing, y si el servicio falla o no hay clave, línea recta con la
+  fórmula de Haversine (radio 6371 km). Interfaz `DistanciaService`; `RutaDistanciaService` está marcada `@Primary` y
+  `HaversineDistanciaService` queda como respaldo, sin cambiar `CotizacionService` (ver *Distancia por calles*).
 - Todo el cálculo usa `BigDecimal` (nunca `double` para dinero). Distancia, pesos, cada costo y el total se redondean
   a 2 decimales con `RoundingMode.HALF_UP`.
 - Se usa siempre la tarifa activa (solo puede haber una). Sin tarifa activa → 503 con mensaje claro.
@@ -102,6 +105,22 @@ Respuesta 400 (criterio 2: datos pendientes y **sin precio**):
 - Valores no negativos con máximo 2 decimales; `porcentajeSeguro` ≤ 100; `nombre` obligatorio, ≤ 60 caracteres, sin `<` ni `>`.
 - `activa` es opcional: `true` activa esta tarifa y desactiva las demás; `false` sobre la tarifa activa → 409.
 
+## Distancia por calles (TomTom Routing)
+
+```
+CotizacionService ──▶ RutaDistanciaService ──▶ TomTomMapasClient ──▶ TomTom Routing API
+                          └─ si falla o no hay clave: HaversineDistanciaService (línea recta)
+```
+
+- El precio usa los kilómetros de la **ruta en carro**, como Google Maps, y no la línea recta.
+- La clave de TomTom vive solo en el backend (`TOMTOM_API_KEY`); el navegador nunca la ve. Si falla la ruta, se usa la
+  línea recta y queda un aviso en el log del backend; la cotización no se cae.
+- `QuoteResult` aclara que el valor se calculó "con la distancia por ruta".
+- Las coordenadas ya no se escriben a mano: se eligen con el buscador de lugares de HU-04 (ver `docs/HU-04-solicitud-envio.md`).
+- Si la distancia no coincide con Google Maps, lo más probable es que TomTom haya ubicado el punto en otro lugar (en
+  Colombia las direcciones con número casi nunca están en los mapas gratuitos). El log
+  `Ruta TomTom: (lat, lng) -> (lat, lng) = N m` muestra los puntos que se usaron.
+
 ## Criterios de aceptación → implementación
 
 1. **Con los datos del paquete y las ubicaciones, el sistema calcula el precio estimado.** `CotizacionService.cotizar`
@@ -129,7 +148,9 @@ Respuesta 400 (criterio 2: datos pendientes y **sin precio**):
 | `domain/Tarifa.java` | Entidad `tarifas` (valores `NUMERIC(12,2)`, `porcentaje_seguro NUMERIC(5,2)`) |
 | `repository/TarifaRepository.java` | Tarifa activa, listado y `desactivarOtras` (JPQL parametrizado) |
 | `config/TarifaSeeder.java` | Crea la tarifa inicial si la tabla está vacía |
-| `service/DistanciaService.java` · `HaversineDistanciaService.java` | Distancia en km (interfaz reemplazable) |
+| `service/DistanciaService.java` · `HaversineDistanciaService.java` | Distancia en km (interfaz reemplazable); la línea recta queda como respaldo |
+| `service/RutaDistanciaService.java` | `@Primary`: distancia por calles con TomTom y respaldo en línea recta |
+| `service/TomTomMapasClient.java` | Llama a TomTom (ruta y búsqueda de lugares); no registra la clave |
 | `service/CotizacionService.java` | Fórmula y desglose |
 | `service/TarifaService.java` | Edición de tarifas, una sola activa |
 | `controller/CotizacionController.java` · `TarifaController.java` | Endpoints + Swagger |
@@ -142,7 +163,7 @@ Respuesta 400 (criterio 2: datos pendientes y **sin precio**):
 |---|---|
 | `cotizacionApi.js` | `cotizar`, `listarTarifas`, `actualizarTarifa` (mismo estilo que `usuariosApi.js`; 401 cierra la sesión) |
 | `cotizacionValidation.js` (+ test) | Mismas reglas que el servidor; acepta coma o punto decimal |
-| `components/QuoteForm.jsx` | Formulario reutilizable (ver props abajo) |
+| `components/QuoteForm.jsx` | Formulario reutilizable (ver props abajo); origen y destino se eligen con `AddressSearch` |
 | `components/QuoteResult.jsx` | Desglose con formato COP y "Valor estimado"; exporta `formatearCOP` |
 | `pages/Quote.jsx` | `/cotizar` (solo CLIENTE_EMISOR) |
 | `pages/AdminTarifas.jsx` | `/admin/tarifas` (solo ADMINISTRADOR): ver y editar la tarifa activa |
@@ -156,6 +177,7 @@ Respuesta 400 (criterio 2: datos pendientes y **sin precio**):
 | `onResult(cotizacion, datos)` | Respuesta del servidor y cuerpo enviado |
 | `onError(err)` | `err.status`, `err.message`, `err.fieldErrors` |
 | `onChange(values)` | Cada cambio de campo |
+| `onLugar(prefijo, lugar)` | Al elegir o quitar el origen o el destino (`prefijo` es `'origen'` o `'destino'`) |
 | `onQuote(datos)` | Reemplaza la llamada por defecto a `POST /api/cotizaciones` (debe devolver una promesa) |
 | `embedded` | `true` dentro de otro `<form>`: se dibuja como `<div>` y el botón es `type="button"` |
 | `submitLabel` | Texto del botón (por defecto "Cotizar") |
@@ -181,6 +203,9 @@ const [cotizacion, setCotizacion] = useState(null)
 | `frontend/src/App.jsx` | + rutas `/cotizar` y `/admin/tarifas` | Pantallas nuevas |
 | `frontend/src/components/AppShell.jsx` | + enlaces "Cotizar" (cliente) y "Tarifas" (admin) | Menú por rol |
 | `frontend/src/pages/Home.jsx` | + acciones "Cotizar un envío" y "Configurar tarifas" | Acceso desde el inicio |
+| `exception/GlobalExceptionHandler.java` | + handler `MapasNoDisponibleException` → 503 | Mapas sin clave o caídos |
+| `resources/application.yml` · `.env.example` | + bloque `app.maps` y variable `TOMTOM_API_KEY` | Configurar TomTom |
+| `frontend/src/components/QuoteForm.jsx` · `QuoteResult.jsx` · `pages/Quote.jsx` | Buscador de lugares y texto "distancia por ruta" | Reemplazan latitud/longitud a mano |
 
 ## Supuestos
 
@@ -197,12 +222,13 @@ const [cotizacion, setCotizacion] = useState(null)
   ```
 - Los nombres JSON siguen los de `Envio` (camelCase: `pesoKg`, `origenLat`...). Los campos `largoCm`, `anchoCm`,
   `altoCm`, `esFragil`, `esUrgente`, `distanciaKm` y `precioCotizado` todavía no están en `Envio` (son de HU-04).
-- Las coordenadas se escriben a mano en el Sprint 1; el mapa llega en el Sprint 2.
+- Las coordenadas ya no se escriben a mano: se buscan por nombre con TomTom (HU-04). Un mapa para marcar el punto sigue pendiente (Sprint 2).
 - Los recargos son valores fijos en COP, no porcentajes.
 
 ## Pruebas
 
 - `CotizacionServiceTest` (Mockito, 12): volumétrico > real, real > volumétrico, frágil, urgente, ambos, distancia 0, redondeo HALF_UP, sin tarifa activa.
+- `RutaDistanciaServiceTest` (5): ruta de TomTom, respaldo en línea recta si falla o no devuelve ruta.
 - `HaversineDistanciaServiceTest` (4), `TarifaServiceTest` (6), `CotizacionRequestValidationTest` (5, datos faltantes y rangos).
 - `CotizacionControllerTest` (MockMvc, 11): 200, 400 sin precio, 503, 403 (REPARTIDOR, ADMINISTRADOR), 401, Swagger.
 - `TarifaControllerTest` (MockMvc, 9): 200 ADMINISTRADOR, 400, 404, 409, 403 (CLIENTE_EMISOR, REPARTIDOR), 401.
