@@ -52,7 +52,7 @@ export default function QuoteResult({ cotizacion, title = 'Cotización' }) {
             </dl>
 
             <p className="quote-note">
-                Valor estimado con la tarifa «{c.tarifa}» y la distancia en línea recta. El valor final puede cambiar
+                Valor estimado con la tarifa «{c.tarifa}» y la distancia por ruta. El valor final puede cambiar
                 cuando se confirme la ruta.
             </p>
         </section>
