@@ -1,6 +1,7 @@
 # HU-04 · Creación de solicitud de envío
 
 Responsable: Miguel Ángel Betancourt Carmona · Rama: `feature/HU-04-solicitud-envio` · 8 puntos
+Ampliación (búsqueda de lugares con TomTom): Jose Manuel Bedoya Mondragón · Rama: `feature/HU-04-05-busqueda-lugares`
 
 > Como cliente emisor, quiero crear una solicitud de envío con los datos del paquete, el origen, el
 > destino y el receptor, para que quede registrada y reciba un código de seguimiento único.
@@ -10,14 +11,69 @@ Responsable: Miguel Ángel Betancourt Carmona · Rama: `feature/HU-04-solicitud-
 Igual que las demás historias: backend en http://localhost:8090 (`cd backend && mvn spring-boot:run`)
 y frontend en http://localhost:5173 (`cd frontend && npm run dev`, proxy `/api` → 8090).
 - Cliente emisor: registrarse en `/registro` → menú **Enviar paquete** (o "Solicitar un envío" en el inicio).
+- Para buscar lugares hace falta la variable `TOMTOM_API_KEY` (ver *Búsqueda de lugares*).
 
 ## Flujo (asistente en pasos)
 
-1. **Paquete y ubicación**: peso, medidas y coordenadas de origen/destino (reutiliza `QuoteForm` de
-   HU-05) + las direcciones de origen y destino, con un botón "Calcular precio".
+1. **Paquete y ubicación**: peso, medidas, las direcciones de origen y destino (el texto que lee el repartidor) y
+   el buscador de **Origen** y **Destino** (reutiliza `QuoteForm` de HU-05), con un botón "Calcular precio".
+   Al elegir un lugar de la lista el sistema llena las coordenadas; ya no se escriben latitud y longitud.
 2. **Receptor**: nombre, teléfono, correo (opcional) y descripción del contenido (opcional).
 3. **Resumen**: todo lo anterior más el precio estimado (`QuoteResult`) y el botón para confirmar.
 4. **Confirmación**: código de seguimiento (`UQD-XXXXXXXX`) con botón de copiar.
+
+## Búsqueda de lugares (TomTom)
+
+```
+Navegador ──GET /api/lugares?q=...──▶ Backend (Spring) ──▶ TomTom Search API
+```
+
+**Qué ve el usuario**
+- Un cuadro por lugar (origen y destino) con **autocompletado**: busca cuando se deja de escribir. Sin selector de ciudad ni botón *Buscar*.
+- Cada opción muestra el **nombre** del lugar y, debajo, su **calle y la ciudad**. No se muestra el barrio de TomTom: para
+  Armenia devolvía "San Pedro" en casi todo y confundía. Se quitó también el ruido administrativo (comuna, perímetro, departamento).
+- La dirección exacta que lee el repartidor es el texto que escribe el cliente; nunca se reemplaza por el nombre del mapa.
+  Solo si ese campo estaba vacío se llena con lo que se buscó.
+- Editar una dirección ya no borra el peso ni las medidas, y al cambiar cualquier dato se descarta el precio y hay que
+  volver a pulsar *Calcular precio*.
+
+**Lugares definidos por el equipo.** `PuntosConocidos` guarda sitios con coordenadas fijas. Si se escribe "Universidad del
+Quindío" aparecen las dos entradas (Ingeniería y Ciencias Básicas) y no se consulta a TomTom. Para agregar uno: en Google
+Maps, clic derecho sobre el sitio → clic en los números (latitud, longitud) → copiarlos en la lista.
+
+**Por qué TomTom.** Gratis y sin tarjeta, y una sola clave da búsqueda con autocompletado y rutas por calles.
+
+| Opción | Gratis | Tarjeta | Búsqueda + rutas | Nota |
+|---|---|---|---|---|
+| **TomTom** (elegida) | 20.000 búsquedas y 20.000 rutas / mes (según su página de precios) | No | Sí | Datos propios, no solo OpenStreetMap |
+| Google Maps | 10.000 por servicio / mes | **Sí** | Sí | Mejor dato en Colombia; exige facturación activa |
+| Geoapify | 3.000 créditos / día | No | Sí | Basada en OpenStreetMap (mismo problema de números de casa) |
+| Nominatim (primer intento) | Sin clave | No | Solo búsqueda | No permite autocompletar; sin ruta |
+
+El proveedor está aislado en `TomTomMapasClient`: cambiar a Google u otro es reemplazar esa clase.
+
+**Puesta en marcha**
+1. Crear cuenta en <https://developer.tomtom.com> y copiar la *API key*.
+2. Definir `TOMTOM_API_KEY` antes de arrancar el backend: en PowerShell `$env:TOMTOM_API_KEY="tu-clave"`; en IntelliJ,
+   *Run configuration → Environment variables*; con Docker, la línea `TOMTOM_API_KEY=...` del `.env`. **Nunca** va en el repositorio.
+3. Probar en *Enviar paquete* o *Cotizar*: escribir `Universidad del Quindío` y otro lugar y elegir.
+
+Sin clave, `/api/lugares` responde 503 con mensaje claro y la cotización sigue con línea recta.
+
+**Configuración (`application.yml`)**
+
+| Propiedad | Valor | Uso |
+|---|---|---|
+| `app.maps.tomtom-key` | `${TOMTOM_API_KEY:}` | Clave |
+| `app.maps.centro-lat/lng` | Armenia | Centro de la búsqueda |
+| `app.maps.ciudad` | `Armenia` | Solo se muestran resultados de este municipio |
+| `app.maps.radio-metros` | `10000` | Limita a la zona urbana (10 km); `0` = solo prioridad, sin límite |
+
+**Limitaciones conocidas**
+- Los números de casa (`Cra 14 # 5-15`) casi nunca están en un mapa gratuito de Colombia: se ubica la calle o la zona. Para
+  el precio basta, pero a veces TomTom ubica el punto a varias cuadras y la distancia por ruta difiere de Google Maps.
+- Si un lugar importante no aparece o sale mal ubicado: agregarlo a `PuntosConocidos`, marcar el punto en un mapa (Sprint 2)
+  o cambiar de proveedor.
 
 ## El precio y la distancia los calcula el servidor, no el cliente
 
@@ -50,6 +106,7 @@ primer registro en `historial_estado_envio` (con `estado_anterior = null`) al mo
 | POST | `/api/envios` | CLIENTE_EMISOR | 201 · 400 (datos pendientes) · 401 · 403 · 503 (sin tarifa activa) |
 | GET | `/api/envios/mis-envios` | CLIENTE_EMISOR | 200 (solo los del cliente autenticado) |
 | GET | `/api/envios/{codigo}` | CLIENTE_EMISOR | 200 · 401 · 403 · 404 (no existe o es de otro cliente) |
+| GET | `/api/lugares?q=` | Usuario autenticado | 200 (lista de lugares) · 401 · 503 (mapas sin clave o caídos) |
 
 Errores con el formato común: `{ "status", "message", "fieldErrors": { "campo": "detalle" } }`.
 Documentado en Swagger (http://localhost:8090/swagger-ui.html), etiqueta **Envíos**.
@@ -114,6 +171,11 @@ Respuesta 400 (criterio 2: datos pendientes y **sin crear el registro**):
 | `service/EnvioService.java` | Código único con reintento, llamada a `CotizacionService`, historial inicial, consultas propias |
 | `controller/EnvioController.java` | Endpoints + Swagger |
 | `dto/CrearEnvioRequest.java` · `EnvioResponse.java` | DTO validados; el controlador nunca devuelve la entidad |
+| `controller/LugarController.java` · `dto/LugarResponse.java` | `GET /api/lugares?q=` (nombre, calle/ciudad y coordenadas) |
+| `service/TomTomMapasClient.java` | Llama a TomTom (búsqueda y ruta); no registra la clave |
+| `service/LugarMapper.java` | Deja título corto y subtítulo calle · ciudad, sin ruido administrativo |
+| `service/PuntosConocidos.java` | Lugares con coordenadas fijas (entradas de la Universidad del Quindío) |
+| `exception/MapasNoDisponibleException.java` | Mapas sin clave o caídos → 503 |
 
 ## Frontend
 
@@ -123,6 +185,8 @@ Respuesta 400 (criterio 2: datos pendientes y **sin crear el registro**):
 | `envioValidation.js` (+ test) | Direcciones y datos del receptor; el paquete y las coordenadas los valida `QuoteForm` |
 | `pages/NewShipment.jsx` | `/envios/nuevo` (solo CLIENTE_EMISOR): asistente en 3 pasos + confirmación |
 | `envio.css` | Estilos del asistente (pasos) y la pantalla de confirmación |
+| `lugaresApi.js` (+ test) | Normaliza el texto (`Cra`→`Carrera`, quita `#`) y llama al backend |
+| `components/AddressSearch.jsx` · `geocodificacion.css` | Autocompletado con teclado (↑ ↓ Enter Esc) y lugar fijado |
 
 ## Cambios sobre archivos de otros integrantes (aditivos, commits `chore(HU-04)`)
 
@@ -132,11 +196,14 @@ Respuesta 400 (criterio 2: datos pendientes y **sin crear el registro**):
 | `frontend/src/App.jsx` | + ruta `/envios/nuevo` | Pantalla nueva |
 | `frontend/src/components/AppShell.jsx` | + enlace "Enviar paquete" (cliente) | Menú por rol |
 | `frontend/src/pages/Home.jsx` | "Solicitar un envío" ahora enlaza a `/envios/nuevo` | Acceso desde el inicio |
+| `exception/GlobalExceptionHandler.java` | + handler `MapasNoDisponibleException` → 503 | Mapas sin clave o caídos |
+| `resources/application.yml` · `.env.example` | + bloque `app.maps` y variable `TOMTOM_API_KEY` | Configurar TomTom |
+| `frontend/src/components/QuoteForm.jsx` · `QuoteResult.jsx` · `pages/Quote.jsx` · `pages/NewShipment.jsx` | Buscador de lugares en vez de latitud/longitud | Origen y destino por nombre |
 
 ## Supuestos y pendientes (para decidir en equipo)
 
-- **Coordenadas a mano, no con mapa:** igual que HU-05 (ver `docs/HU-05-cotizacion.md`), el selector
-  con Leaflet/Nominatim que pide el enunciado se deja para el Sprint 2.
+- **Búsqueda por nombre, todavía sin mapa:** origen y destino se buscan con TomTom y se elige de una lista. El mapa para
+  marcar el punto, que pide el enunciado, se deja para el Sprint 2.
 - **Flyway nunca se configuró.** La guía lo asigna por persona (V1 Jose, V2 César, V3 Santiago,
   **V4 Miguel**) con `ddl-auto: validate`; el equipo sigue en `ddl-auto: update` (Santiago ya lo había
   dejado como supuesto en HU-05). Sigue pendiente porque pasar a `validate` afecta el esquema de
@@ -156,6 +223,7 @@ Respuesta 400 (criterio 2: datos pendientes y **sin crear el registro**):
   activa, consulta propia vs. ajena.
 - `EnvioControllerTest` (MockMvc, 12): 201, 400 sin crear registro, 503, 403 (REPARTIDOR,
   ADMINISTRADOR), 401, dueño vs. otro cliente en `mis-envios` y en `/{codigo}`, Swagger.
-- Frontend: `envioValidation.test.js` (Vitest, 12).
+- Búsqueda de lugares: `LugarControllerTest` (5), `LugarMapperTest` (6), `PuntosConocidosTest` (3).
+- Frontend: `envioValidation.test.js` (Vitest, 12) y `lugaresApi.test.js` (7).
 - Cobertura JaCoCo de `EnvioService`: 97 % de instrucciones, 83 % de ramas (`cd backend && mvn test`
   → `target/site/jacoco/index.html`); `EnvioController`: 100 %.
