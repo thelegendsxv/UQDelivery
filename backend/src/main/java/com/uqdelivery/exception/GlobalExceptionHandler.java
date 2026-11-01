@@ -81,4 +81,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTarifaNoDisponible(TarifaNoDisponibleException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(503, ex.getMessage()));
     }
+
+    // Mapas (busqueda de lugares / ruta)
+
+    @ExceptionHandler(MapasNoDisponibleException.class)
+    public ResponseEntity<ErrorResponse> handleMapasNoDisponible(MapasNoDisponibleException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(503, ex.getMessage()));
+    }
 }
