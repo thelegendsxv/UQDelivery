@@ -19,7 +19,7 @@ export default function Quote() {
     return (
         <AppShell>
             <div className="page-head"><h1>Cotizar envío</h1></div>
-            <p className="lede">Escribe el peso, las medidas y las coordenadas de origen y destino para conocer el precio estimado.</p>
+            <p className="lede">Escribe el peso y las medidas, y busca el origen y el destino por barrio, dirección o lugar conocido: el precio estimado se calcula con la distancia por las calles.</p>
 
             <div className="quote-layout">
                 <section className="panel">

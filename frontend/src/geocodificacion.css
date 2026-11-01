@@ -1,0 +1,17 @@
+/* Buscador de lugares con autocompletado - usa las variables de index.css */
+.geo-combo { position: relative; }
+.geo-combo input { width: 100%; }
+.geo-spinner { position: absolute; right: 12px; top: 12px; width: 18px; height: 18px; }
+
+.geo-results { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(18, 32, 47, 0.12); max-height: 260px; overflow-y: auto; }
+.geo-results button { display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.geo-results button:hover, .geo-results button.is-activo { background: var(--ok-bg); }
+.geo-titulo { font-size: 0.95rem; font-weight: 600; }
+.geo-subtitulo { font-size: 0.82rem; color: var(--ink-soft); }
+
+.geo-msg { margin-top: 8px; color: var(--ink-soft); font-size: 0.88rem; }
+.geo-ok { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1.5px solid #9fd3cf; border-radius: 10px; background: var(--ok-bg); color: #0a4f51; font-size: 0.92rem; }
+.geo-ok-texto { display: flex; flex-direction: column; min-width: 0; }
+.geo-ok-texto small { color: var(--ink-soft); }
+.geo-ok .btn-ghost { flex: none; height: 34px; padding: 0 12px; }
+.geo-attrib { margin: 4px 0 12px; color: var(--ink-soft); font-size: 0.8rem; }

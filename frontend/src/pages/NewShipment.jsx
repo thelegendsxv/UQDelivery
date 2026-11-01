@@ -16,8 +16,8 @@ const PASOS = ['Paquete y ubicación', 'Receptor', 'Resumen']
  * HU-04 - El cliente emisor crea una solicitud de envio en pasos. El paso 1 reutiliza QuoteForm
  * (HU-05) para el peso, las medidas y las coordenadas, y de paso calcula el precio estimado: el
  * precio y la distancia que se guardan los recalcula el servidor con los mismos datos (nunca los
- * decide el cliente). Las coordenadas se escriben a mano; el mapa llega en el Sprint 2 (igual que
- * en la pagina de cotizacion).
+ * decide el cliente). El origen y el destino se buscan por nombre (barrio, direccion o lugar) con
+ * busqueda de lugares (TomTom, a traves del backend): al elegir un resultado se llenan las coordenadas.
  */
 export default function NewShipment() {
     const navigate = useNavigate()
@@ -37,6 +37,24 @@ export default function NewShipment() {
     function onDireccion(e) {
         setPaquete({ ...paquete, [e.target.name]: e.target.value })
         setCotizacion(null) // si cambia la direccion, conviene volver a cotizar
+    }
+
+    // El formulario de cotizacion avisa de cada cambio: se copia al paquete para que no se pierda al
+    // editar las direcciones, y el precio calculado deja de valer.
+    function onPaqueteCambia(valores) {
+        setPaquete((p) => ({ ...p, ...valores }))
+        setCotizacion(null)
+    }
+
+    // Las coordenadas del buscador sirven para el precio; la direccion que lee el repartidor es la que escribe
+    // el usuario y no se pisa. Solo si el campo estaba vacio se llena con lo que escribio en el buscador.
+    function onLugar(prefijo, lugar) {
+        if (lugar) {
+            setPaquete((p) => (String(p[`${prefijo}Direccion`] ?? '').trim()
+                ? p
+                : { ...p, [`${prefijo}Direccion`]: lugar.textoBuscado || lugar.etiqueta }))
+        }
+        setCotizacion(null)
     }
 
     function onCotizacionLista(c, datos) {
@@ -114,13 +132,14 @@ export default function NewShipment() {
                     <section className="panel">
                         <h2>Paquete y ubicación</h2>
                         <div className="grid-form">
-                            <Field label="Dirección de origen" name="origenDireccion" value={paquete.origenDireccion}
+                            <Field label="Dirección de origen (la verá el repartidor)" name="origenDireccion" value={paquete.origenDireccion}
                                    onChange={onDireccion} error={paqueteErrors.origenDireccion} />
-                            <Field label="Dirección de destino" name="destinoDireccion" value={paquete.destinoDireccion}
+                            <Field label="Dirección de destino (la verá el repartidor)" name="destinoDireccion" value={paquete.destinoDireccion}
                                    onChange={onDireccion} error={paqueteErrors.destinoDireccion} />
                         </div>
-                        <p className="lede">Agrega también las coordenadas de origen y destino (el selector con mapa llega en el Sprint 2).</p>
+                        <p className="lede">Escribe la dirección completa (con el barrio si lo sabes) y, en Origen y Destino, busca y elige el lugar: así se calcula el precio por la ruta real.</p>
                         <QuoteForm embedded submitLabel="Calcular precio" initialValues={paquete}
+                                   onChange={onPaqueteCambia} onLugar={onLugar}
                                    onResult={onCotizacionLista} onError={() => setCotizacion(null)} />
                         <div className="actions">
                             <button className="btn btn-inline" type="button" onClick={irAReceptor}>Continuar</button>
