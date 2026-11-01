@@ -3,6 +3,7 @@ import { cotizar } from '../cotizacionApi.js'
 import {
     aSolicitudCotizacion, CAMPOS_COTIZACION, COTIZACION_VACIA, validarCotizacion,
 } from '../cotizacionValidation.js'
+import AddressSearch from './AddressSearch.jsx'
 import Field from './Field.jsx'
 import '../cotizacion.css'
 
@@ -11,15 +12,18 @@ import '../cotizacion.css'
  *
  * Props (todas opcionales):
  *  - initialValues: valores iniciales, p. ej. { pesoKg: 2, origenLat: 4.53, esFragil: true }. Si cambian, se aplican.
+ *    Si trae origenDireccion / destinoDireccion, el cuadro de busqueda de cada lugar muestra ese texto.
  *  - onResult(cotizacion, datos): se llama con la respuesta del servidor y el cuerpo enviado.
  *  - onError(err): se llama si el servidor responde con error (err.status, err.message, err.fieldErrors).
  *  - onChange(values): se llama cada vez que cambia un campo (valores tal como se escriben).
+ *  - onLugar(prefijo, lugar): se llama al elegir (o quitar) el origen o el destino en el buscador;
+ *    prefijo es 'origen' o 'destino' y lugar { etiqueta, lat, lng } o null.
  *  - onQuote(datos): reemplaza la llamada por defecto a POST /api/cotizaciones; debe devolver una promesa.
  *  - embedded: true para usarlo dentro de otro <form> (se dibuja como <div> y el boton no envia el formulario padre).
  *  - submitLabel: texto del boton (por defecto "Cotizar").
  */
 export default function QuoteForm({
-    initialValues, onResult, onError, onChange, onQuote, embedded = false, submitLabel = 'Cotizar',
+    initialValues, onResult, onError, onChange, onLugar, onQuote, embedded = false, submitLabel = 'Cotizar',
 }) {
     const [values, setValues] = useState(() => ({ ...COTIZACION_VACIA, ...limpiar(initialValues) }))
     const [errors, setErrors] = useState({})
@@ -39,6 +43,16 @@ export default function QuoteForm({
 
     const onInput = (e) => actualizar({ ...values, [e.target.name]: e.target.value })
     const onCheck = (e) => actualizar({ ...values, [e.target.name]: e.target.checked })
+
+    // El buscador de direcciones llena (o vacia) la latitud y la longitud del origen o del destino.
+    function fijarLugar(prefijo, lugar) {
+        actualizar({
+            ...values,
+            [`${prefijo}Lat`]: lugar ? String(lugar.lat) : '',
+            [`${prefijo}Lng`]: lugar ? String(lugar.lng) : '',
+        })
+        onLugar?.(prefijo, lugar)
+    }
 
     async function enviar(e) {
         e?.preventDefault()
@@ -81,12 +95,11 @@ export default function QuoteForm({
 
             <fieldset className="quote-group">
                 <legend>Origen y destino</legend>
-                <div className="grid-form">
-                    <Field label="Latitud de origen" name="origenLat" value={values.origenLat} onChange={onInput} error={errors.origenLat} />
-                    <Field label="Longitud de origen" name="origenLng" value={values.origenLng} onChange={onInput} error={errors.origenLng} />
-                    <Field label="Latitud de destino" name="destinoLat" value={values.destinoLat} onChange={onInput} error={errors.destinoLat} />
-                    <Field label="Longitud de destino" name="destinoLng" value={values.destinoLng} onChange={onInput} error={errors.destinoLng} />
-                </div>
+                <AddressSearch etiqueta="Origen" name="origen" textoInicial={initialValues?.origenDireccion} lat={values.origenLat} lng={values.origenLng}
+                               error={errors.origenLat || errors.origenLng} onSelect={(l) => fijarLugar('origen', l)} />
+                <AddressSearch etiqueta="Destino" name="destino" textoInicial={initialValues?.destinoDireccion} lat={values.destinoLat} lng={values.destinoLng}
+                               error={errors.destinoLat || errors.destinoLng} onSelect={(l) => fijarLugar('destino', l)} />
+                <p className="geo-attrib">Ubicaciones con datos de TomTom.</p>
             </fieldset>
 
             <div className="checks">

@@ -32,6 +32,16 @@ app:
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     from: ${MAIL_FROM:no-reply@uqdelivery.com}
+  # HU-04 / HU-05: busqueda de lugares y distancia por calles con TomTom (https://developer.tomtom.com, sin tarjeta).
+  # La clave solo va en la variable de entorno TOMTOM_API_KEY, nunca en el repo. Sin clave, la busqueda responde 503
+  # y la cotizacion usa la distancia en linea recta. La busqueda se limita a `ciudad` y a `radio-metros` alrededor
+  # del centro (Armenia, 10 km cubre la zona urbana); radio 0 = solo dar prioridad, sin limitar.
+  maps:
+    tomtom-key: ${TOMTOM_API_KEY:}
+    ciudad: Armenia
+    centro-lat: 4.5339
+    centro-lng: -75.6811
+    radio-metros: ${MAPS_RADIO_METROS:10000}
   # HU-02: administrador inicial (AdminSeeder, creado en config). Valores solo para desarrollo local;
   # en produccion se definen ADMIN_EMAIL y ADMIN_PASSWORD como variables de entorno.
   admin:
