@@ -8,14 +8,22 @@ import com.uqdelivery.dto.CotizacionRequest;
 import com.uqdelivery.dto.CotizacionResponse;
 import com.uqdelivery.dto.CrearEnvioRequest;
 import com.uqdelivery.dto.EnvioResponse;
+import com.uqdelivery.exception.FiltroInvalidoException;
 import com.uqdelivery.exception.ResourceNotFoundException;
 import com.uqdelivery.repository.EnvioRepository;
 import com.uqdelivery.repository.HistorialEstadoEnvioRepository;
 import com.uqdelivery.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,6 +33,9 @@ import java.util.List;
  */
 @Service
 public class EnvioService {
+
+    /** Zona en la que el cliente entiende "el dia" de un filtro por fechas. */
+    private static final ZoneId ZONA = ZoneId.of("America/Bogota");
 
     // Sin O/0/I/1 para que el codigo se lea y se dicte facil por telefono.
     static final String ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -88,6 +99,33 @@ public class EnvioService {
     @Transactional(readOnly = true)
     public List<EnvioResponse> misEnvios(String emailCliente) {
         return envios.findByClienteEmailOrderByCreatedAtDesc(emailCliente).stream().map(EnvioResponse::from).toList();
+    }
+
+    /**
+     * HU-14 · Historial del cliente con filtros opcionales por estado y por fechas de creacion (ambas inclusivas, en
+     * hora de Colombia). Siempre se limita a los envios del cliente autenticado. Sin filtros se usa la consulta simple.
+     */
+    @Transactional(readOnly = true)
+    public List<EnvioResponse> misEnvios(String emailCliente, EstadoEnvio estado, LocalDate desde, LocalDate hasta) {
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new FiltroInvalidoException("La fecha inicial no puede ser posterior a la fecha final");
+        }
+        if (estado == null && desde == null && hasta == null) return misEnvios(emailCliente);
+
+        Specification<Envio> filtros = (root, query, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            condiciones.add(cb.equal(root.get("cliente").get("email"), emailCliente));
+            if (estado != null) condiciones.add(cb.equal(root.get("estado"), estado));
+            if (desde != null) {
+                condiciones.add(cb.greaterThanOrEqualTo(root.<Instant>get("createdAt"), desde.atStartOfDay(ZONA).toInstant()));
+            }
+            if (hasta != null) { // el dia final entra completo: se compara contra el inicio del dia siguiente
+                condiciones.add(cb.lessThan(root.<Instant>get("createdAt"), hasta.plusDays(1).atStartOfDay(ZONA).toInstant()));
+            }
+            return cb.and(condiciones.toArray(new Predicate[0]));
+        };
+        Sort masRecientePrimero = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
+        return envios.findAll(filtros, masRecientePrimero).stream().map(EnvioResponse::from).toList();
     }
 
     private User buscarCliente(String email) {
