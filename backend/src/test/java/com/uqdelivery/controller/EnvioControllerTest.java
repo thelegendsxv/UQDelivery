@@ -1,6 +1,8 @@
 package com.uqdelivery.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uqdelivery.domain.Envio;
+import com.uqdelivery.domain.EstadoEnvio;
 import com.uqdelivery.domain.Role;
 import com.uqdelivery.domain.User;
 import com.uqdelivery.repository.EnvioRepository;
@@ -14,6 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
@@ -203,5 +208,98 @@ class EnvioControllerTest {
             throw new AssertionError("Se creo un registro de envio cuando no debia: esperaba " + esperado
                     + " pero hay " + envios.count());
         }
+    }
+
+    //HU-14: historial con filtros
+
+    private String crearEnvio(String token) throws Exception {
+        String body = mvc.perform(post(URL).header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(VALIDO))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return mapper.readTree(body).get("codigoSeguimiento").asText();
+    }
+
+    private void cambiarEstado(String codigo, EstadoEnvio estado) {
+        Envio envio = envios.findByCodigoSeguimiento(codigo).orElseThrow();
+        envio.setEstado(estado);
+        envios.saveAndFlush(envio);
+    }
+
+    @Test
+    void filtrarPorEstadoMuestraSoloLosEnviosEnEseEstado() throws Exception {
+        String token = token("hu14.estado@mail.com", Role.CLIENTE_EMISOR);
+        crearEnvio(token); // queda PENDIENTE_ASIGNACION
+        cambiarEstado(crearEnvio(token), EstadoEnvio.CANCELADO);
+
+        mvc.perform(get(URL + "/mis-envios").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+        mvc.perform(get(URL + "/mis-envios").param("estado", "CANCELADO").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].estado").value("CANCELADO"));
+        mvc.perform(get(URL + "/mis-envios").param("estado", "PENDIENTE_ASIGNACION").header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].estado").value("PENDIENTE_ASIGNACION"));
+        mvc.perform(get(URL + "/mis-envios").param("estado", "ENTREGADO").header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void filtrarPorFechasIncluyeElDiaDeCreacionYExcluyeLosDemasDias() throws Exception {
+        String token = token("hu14.fechas@mail.com", Role.CLIENTE_EMISOR);
+        crearEnvio(token);
+        String hoy = LocalDate.now(ZoneId.of("America/Bogota")).toString();
+
+        mvc.perform(get(URL + "/mis-envios").param("desde", hoy).param("hasta", hoy).header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(get(URL + "/mis-envios").param("desde", "2000-01-01").header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(get(URL + "/mis-envios").param("hasta", "2000-01-01").header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get(URL + "/mis-envios").param("desde", "2999-01-01").header("Authorization", token))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void losFiltrosNuncaMuestranEnviosDeOtroCliente() throws Exception {
+        String tokenA = token("hu14.a@mail.com", Role.CLIENTE_EMISOR);
+        String tokenB = token("hu14.b@mail.com", Role.CLIENTE_EMISOR);
+        crearEnvio(tokenA);
+
+        mvc.perform(get(URL + "/mis-envios").param("estado", "PENDIENTE_ASIGNACION").header("Authorization", tokenB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get(URL + "/mis-envios").param("desde", "2000-01-01").header("Authorization", tokenB))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void unRangoDeFechasInvertidoDevuelve400() throws Exception {
+        String token = token("hu14.rango@mail.com", Role.CLIENTE_EMISOR);
+
+        mvc.perform(get(URL + "/mis-envios").param("desde", "2026-02-01").param("hasta", "2026-01-01")
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("fecha")));
+    }
+
+    @Test
+    void unEstadoOUnaFechaInvalidosDevuelven400() throws Exception {
+        String token = token("hu14.invalido@mail.com", Role.CLIENTE_EMISOR);
+
+        mvc.perform(get(URL + "/mis-envios").param("estado", "NO_EXISTE").header("Authorization", token))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(URL + "/mis-envios").param("desde", "ayer").header("Authorization", token))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void elRepartidorNoPuedeConsultarElHistorialDeUnCliente() throws Exception {
+        String token = token("hu14.repartidor@mail.com", Role.REPARTIDOR);
+
+        mvc.perform(get(URL + "/mis-envios").param("estado", "ENTREGADO").header("Authorization", token))
+                .andExpect(status().isForbidden());
     }
 }
