@@ -24,6 +24,7 @@ export default function AppShell({ children, narrow = false }) {
                     {session.role === ROLES.ADMINISTRADOR && <NavLink to="/admin/tarifas">Tarifas</NavLink>}
                     {session.role === ROLES.CLIENTE_EMISOR && <NavLink to="/cotizar">Cotizar</NavLink>}
                     {session.role === ROLES.CLIENTE_EMISOR && <NavLink to="/envios/nuevo">Enviar paquete</NavLink>}
+                    {session.role === ROLES.CLIENTE_EMISOR && <NavLink to="/envios" end>Mis envíos</NavLink>}
                     <NavLink to="/perfil">Mi perfil</NavLink>
                 </nav>
                 <div className="user">
