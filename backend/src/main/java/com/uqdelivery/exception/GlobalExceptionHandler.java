@@ -69,6 +69,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorResponse(400, ex.getMessage()));
     }
 
+    //HU-14
+
+    @ExceptionHandler(FiltroInvalidoException.class)
+    public ResponseEntity<ErrorResponse> handleFiltroInvalido(FiltroInvalidoException ex) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(400, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest()
