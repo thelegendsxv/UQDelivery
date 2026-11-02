@@ -7,6 +7,7 @@ import com.uqdelivery.domain.Tarifa;
 import com.uqdelivery.domain.User;
 import com.uqdelivery.dto.CrearEnvioRequest;
 import com.uqdelivery.dto.EnvioResponse;
+import com.uqdelivery.exception.FiltroInvalidoException;
 import com.uqdelivery.exception.ResourceNotFoundException;
 import com.uqdelivery.exception.TarifaNoDisponibleException;
 import com.uqdelivery.repository.EnvioRepository;
@@ -15,9 +16,12 @@ import com.uqdelivery.repository.TarifaRepository;
 import com.uqdelivery.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -175,5 +179,49 @@ class EnvioServiceTest {
 
         assertEquals(1, res.size());
         assertEquals("UQD-MIO00001", res.get(0).codigoSeguimiento());
+    }
+
+    //HU-14: historial con filtros
+
+    @Test
+    void misEnviosSinFiltrosUsaLaConsultaSimple() {
+        when(envios.findByClienteEmailOrderByCreatedAtDesc(CLIENTE_EMAIL)).thenReturn(List.of());
+
+        service.misEnvios(CLIENTE_EMAIL, null, null, null);
+
+        verify(envios).findByClienteEmailOrderByCreatedAtDesc(CLIENTE_EMAIL);
+        verify(envios, never()).findAll(any(Specification.class), any(Sort.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void misEnviosConFiltrosConsultaConEspecificacionYDevuelveLosEnvios() {
+        Envio envio = new Envio("UQD-CANCEL01", "Origen", "Destino", cliente());
+        envio.setEstado(EstadoEnvio.CANCELADO);
+        when(envios.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(envio));
+
+        List<EnvioResponse> res = service.misEnvios(CLIENTE_EMAIL, EstadoEnvio.CANCELADO,
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31));
+
+        assertEquals(1, res.size());
+        assertEquals(EstadoEnvio.CANCELADO, res.get(0).estado());
+        verify(envios, never()).findByClienteEmailOrderByCreatedAtDesc(any());
+    }
+
+    @Test
+    void unRangoDeFechasInvertidoSeRechazaSinConsultar() {
+        FiltroInvalidoException ex = assertThrows(FiltroInvalidoException.class,
+                () -> service.misEnvios(CLIENTE_EMAIL, null, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)));
+
+        assertTrue(ex.getMessage().contains("fecha"));
+        verify(envios, never()).findAll(any(Specification.class), any(Sort.class));
+        verify(envios, never()).findByClienteEmailOrderByCreatedAtDesc(any());
+    }
+
+    @Test
+    void elMismoDiaComoDesdeYHastaEsUnRangoValido() {
+        when(envios.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());
+
+        assertTrue(service.misEnvios(CLIENTE_EMAIL, null, LocalDate.of(2026, 5, 4), LocalDate.of(2026, 5, 4)).isEmpty());
     }
 }
