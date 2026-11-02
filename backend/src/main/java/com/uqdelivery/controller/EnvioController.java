@@ -1,5 +1,6 @@
 package com.uqdelivery.controller;
 
+import com.uqdelivery.domain.EstadoEnvio;
 import com.uqdelivery.dto.CrearEnvioRequest;
 import com.uqdelivery.dto.EnvioResponse;
 import com.uqdelivery.service.EnvioService;
@@ -7,15 +8,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
-/** HU-04 · Creacion y consulta de solicitudes de envio. */
+/** HU-04 · Creacion y consulta de solicitudes de envio. HU-14 · historial con filtros. */
 @RestController
 @RequestMapping("/api/envios")
 @PreAuthorize("hasRole('CLIENTE_EMISOR')")
@@ -42,14 +45,20 @@ public class EnvioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.crear(req, auth.getName()));
     }
 
-    @Operation(summary = "Lista los envíos del cliente autenticado",
-               description = "Solo los envíos que el cliente creó, del más reciente al más antiguo.")
-    @ApiResponse(responseCode = "200", description = "Lista de envíos del cliente")
+    @Operation(summary = "Lista los envíos del cliente autenticado (historial)",
+               description = "Solo los envíos que el cliente creó, del más reciente al más antiguo. Filtros opcionales "
+                       + "(HU-14): estado y fechas de creación desde/hasta (AAAA-MM-DD, ambas inclusivas, hora de Colombia).")
+    @ApiResponse(responseCode = "200", description = "Lista de envíos del cliente que cumplen los filtros")
+    @ApiResponse(responseCode = "400", description = "Estado o fecha inválidos, o fecha inicial posterior a la final")
     @ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido")
     @ApiResponse(responseCode = "403", description = "El rol no es CLIENTE_EMISOR")
     @GetMapping("/mis-envios")
-    public List<EnvioResponse> misEnvios(Authentication auth) {
-        return service.misEnvios(auth.getName());
+    public List<EnvioResponse> misEnvios(
+            @RequestParam(required = false) EstadoEnvio estado,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            Authentication auth) {
+        return service.misEnvios(auth.getName(), estado, desde, hasta);
     }
 
     @Operation(summary = "Consulta un envío por su código de seguimiento",
