@@ -8,6 +8,7 @@ import Forbidden from './pages/Forbidden.jsx'
 import Quote from './pages/Quote.jsx'
 import AdminTarifas from './pages/AdminTarifas.jsx'
 import NewShipment from './pages/NewShipment.jsx'
+import MyShipments from './pages/MyShipments.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
 import { getSession } from './auth.js'
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/admin/usuarios" element={<Protected roles={[ROLES.ADMINISTRADOR]}><AdminUsers /></Protected>} />
             <Route path="/cotizar" element={<Protected roles={[ROLES.CLIENTE_EMISOR]}><Quote /></Protected>} />
             <Route path="/envios/nuevo" element={<Protected roles={[ROLES.CLIENTE_EMISOR]}><NewShipment /></Protected>} />
+            <Route path="/envios" element={<Protected roles={[ROLES.CLIENTE_EMISOR]}><MyShipments /></Protected>} />
             <Route path="/admin/tarifas" element={<Protected roles={[ROLES.ADMINISTRADOR]}><AdminTarifas /></Protected>} />
             <Route path="/acceso-denegado" element={<Protected><Forbidden /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
