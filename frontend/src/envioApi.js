@@ -1,6 +1,7 @@
 import { clearSession, getSession } from './auth.js'
+import { aQuery } from './historialValidation.js'
 
-// HU-04 · Llamadas a /api/envios (mismo estilo que cotizacionApi.js y usuariosApi.js)
+// HU-04 · Llamadas a /api/envios (HU-14: misEnvios acepta filtros por estado y fechas) (mismo estilo que cotizacionApi.js y usuariosApi.js)
 async function request(path, { method = 'GET', body } = {}) {
     const session = getSession()
     const res = await fetch(`/api/envios${path}`, {
@@ -27,5 +28,5 @@ async function request(path, { method = 'GET', body } = {}) {
 }
 
 export const crearEnvio = (datos) => request('', { method: 'POST', body: datos })
-export const misEnvios = () => request('/mis-envios')
+export const misEnvios = (filtros = {}) => request(`/mis-envios${aQuery(filtros)}`)
 export const obtenerEnvio = (codigo) => request(`/${codigo}`)
