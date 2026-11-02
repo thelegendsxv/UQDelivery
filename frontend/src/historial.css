@@ -1,0 +1,22 @@
+/* HU-14 · Historial de envios (reutiliza .filters, .users-table, .panel y .banner de usuarios.css) */
+.filters-historial { grid-template-columns: 2fr 1fr 1fr auto auto; }
+.codigo-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; white-space: nowrap; }
+
+.estado { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.estado-pendiente-asignacion { background: #fff1c7; color: #6b4a00; }
+.estado-asignado { background: #e0ecff; color: #1d3f8a; }
+.estado-en-ruta { background: var(--ok-bg); color: #0a4f51; }
+.estado-entregado { background: #d6f2dc; color: #14532d; }
+.estado-cancelado { background: var(--danger-bg); color: #7a1710; }
+.estado-con-novedad { background: #ffe4d1; color: #7a3a00; }
+
+.historial-table td:nth-child(3) { min-width: 220px; }
+.detalle-fila td { background: #f7fafb; }
+.detalle { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 24px; margin: 4px 0; }
+.detalle .dato dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+.detalle .dato dd { margin: 2px 0 0; }
+.historial-total { margin: 14px 0 0; color: var(--ink-soft); font-size: 0.92rem; }
+
+@media (max-width: 880px) {
+    .filters-historial { grid-template-columns: 1fr; }
+}
