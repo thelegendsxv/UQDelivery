@@ -1,0 +1,17 @@
+/* HU-04 - Estilos del asistente de solicitud de envio, con los colores de index.css */
+
+.steps { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 20px; padding: 0; list-style: none; }
+.steps li { padding: 6px 14px; border-radius: 999px; background: #e9eff3; color: var(--ink-soft); font-weight: 600; font-size: 0.88rem; }
+.steps li.is-current { background: var(--saffron); color: var(--ink); }
+.steps li.is-done { background: var(--ok-bg); color: #0a4f51; }
+
+.confirmacion { text-align: center; padding: 40px 24px; }
+.codigo-seguimiento {
+    margin: 16px 0 24px; font-family: var(--font-display); font-weight: 800;
+    font-size: clamp(1.8rem, 1.4rem + 1.5vw, 2.6rem); letter-spacing: 0.04em; color: var(--route-ink);
+}
+.confirmacion .actions { display: flex; justify-content: center; gap: 12px; }
+
+@media (max-width: 880px) {
+    .steps { gap: 6px 10px; }
+}

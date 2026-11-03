@@ -17,7 +17,7 @@ const ROLES = {
     nombre: 'cliente emisor',
     acciones: [
       ['Cotizar un envío', 'Conoce el precio estimado según el peso, las medidas y la distancia.', '/cotizar'],
-      ['Solicitar un envío', 'Registra un paquete con su origen y su destino.'],
+      ['Solicitar un envío', 'Registra un paquete con su origen y su destino.', '/envios/nuevo'],
       ['Pagar el servicio', 'Paga tus envíos desde la plataforma.'],
       ['Consultar tu historial', 'Revisa todos los envíos que has solicitado.'],
     ],
