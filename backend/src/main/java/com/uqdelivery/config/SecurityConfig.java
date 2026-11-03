@@ -50,6 +50,8 @@ public class SecurityConfig {
                         // HU-05: el rol se revisa antes de validar el cuerpo (403 antes que 400).
                         .requestMatchers("/api/cotizaciones", "/api/cotizaciones/**").hasRole("CLIENTE_EMISOR")
                         .requestMatchers("/api/tarifas", "/api/tarifas/**").hasRole("ADMINISTRADOR")
+                        // HU-04: mismo criterio, para que otro rol reciba 403 antes que 400.
+                        .requestMatchers("/api/envios", "/api/envios/**").hasRole("CLIENTE_EMISOR")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> {
